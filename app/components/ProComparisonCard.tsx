@@ -1,0 +1,1 @@
+export { ProComparisonCard } from './index';

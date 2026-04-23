@@ -1,0 +1,1 @@
+export { FaultCard } from './index';

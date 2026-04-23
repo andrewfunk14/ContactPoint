@@ -1,7 +1,7 @@
 {
   "name": "contactpointapp",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -9,14 +9,46 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~54.0.33",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "@expo/vector-icons": "^15.1.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.104.0",
+    "expo": "~55.0.17",
+    "expo-av": "^16.0.8",
+    "expo-camera": "~55.0.16",
+    "expo-constants": "^55.0.15",
+    "expo-dev-client": "^55.0.28",
+    "expo-file-system": "~55.0.17",
+    "expo-font": "~55.0.6",
+    "expo-haptics": "~55.0.14",
+    "expo-image-picker": "~55.0.19",
+    "expo-linear-gradient": "~55.0.13",
+    "expo-linking": "^55.0.14",
+    "expo-router": "~55.0.13",
+    "expo-status-bar": "~55.0.5",
+    "ffmpeg-kit-react-native": "^6.0.2",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-reanimated": "4.2.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "15.15.3",
+    "react-native-vision-camera": "^5.0.4",
+    "react-native-worklets": "0.7.4"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
+    "@types/react": "~19.2.10",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "expo-av",
+          "ffmpeg-kit-react-native"
+        ]
+      }
+    }
+  }
 }
