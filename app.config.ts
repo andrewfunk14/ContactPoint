@@ -34,6 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-camera',
     'expo-font',
+    'expo-video',
   ],
   scheme: 'contactpoint',
   extra: {

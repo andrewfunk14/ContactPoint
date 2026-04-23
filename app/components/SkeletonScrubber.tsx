@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Dimensions, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Svg, { Line, Circle } from 'react-native-svg';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { PoseFrame, ServePhaseRange, ServePhase, PoseLandmark } from '../../lib/types';
 import { PhasePill } from './index';
 
@@ -75,7 +75,10 @@ interface Props {
 export default function SkeletonScrubber({ poseFrames, phases, videoUri }: Props) {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const videoRef = React.useRef<Video>(null);
+  const player = useVideoPlayer(videoUri ? { uri: videoUri } : null, (p) => {
+    p.pause();
+    p.muted = true;
+  });
 
   const screenWidth = Dimensions.get('window').width;
   const viewHeight = screenWidth * (9 / 16);
@@ -91,8 +94,8 @@ export default function SkeletonScrubber({ poseFrames, phases, videoUri }: Props
   function seekToFrame(index: number) {
     const clamped = Math.max(0, Math.min(index, totalFrames - 1));
     setCurrentFrameIndex(clamped);
-    if (videoRef.current && poseFrames[clamped]) {
-      videoRef.current.setPositionAsync(poseFrames[clamped].timestampMs);
+    if (player && poseFrames[clamped]) {
+      player.currentTime = poseFrames[clamped].timestampMs / 1000;
     }
   }
 
@@ -103,13 +106,11 @@ export default function SkeletonScrubber({ poseFrames, phases, videoUri }: Props
     <View style={{ width: screenWidth, height: viewHeight + 48, backgroundColor: '#0a0a0f' }}>
       {/* Video layer */}
       {videoUri ? (
-        <Video
-          ref={videoRef}
-          source={{ uri: videoUri }}
+        <VideoView
+          player={player}
           style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.CONTAIN}
-          shouldPlay={false}
-          isMuted
+          contentFit="contain"
+          nativeControls={false}
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: '#111118' }]} />
