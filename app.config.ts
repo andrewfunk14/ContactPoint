@@ -24,6 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
+    package: 'com.contactpoint.app',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#0a0a0f',
