@@ -66,8 +66,13 @@ export default function RecordScreen() {
   }
 
   async function handlePickVideo() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Photo library access is needed to select videos.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      mediaTypes: ['videos'],
       quality: 1,
     });
     if (!result.canceled && result.assets[0]) {
@@ -76,29 +81,11 @@ export default function RecordScreen() {
   }
 
   async function navigateToProcessing(videoUri: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: session, error } = await supabase
-      .from('sessions')
-      .insert({
-        coach_id: user.id,
-        student_id: params.studentId ?? null,
-        date: new Date().toISOString().split('T')[0],
-      })
-      .select()
-      .single();
-
-    if (error || !session) {
-      Alert.alert('Error', 'Failed to create session.');
-      return;
-    }
-
     router.push({
       pathname: '/processing',
       params: {
         videoUri,
-        sessionId: session.id,
+        studentId: params.studentId ?? '',
         dominantHand,
         level,
         studentName: params.studentName ?? '',

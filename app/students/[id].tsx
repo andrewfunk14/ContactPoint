@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { Student } from '../../lib/types';
-import { ScoreRing } from '../components/index';
+import { ScoreRing } from '../../components/index';
 
 const LEVEL_COLORS: Record<Student['level'], string> = {
   beginner: '#555',
@@ -46,7 +46,7 @@ export default function StudentDetailScreen() {
       supabase
         .from('serve_analyses')
         .select('id, thumbnail_url, score_overall, created_at, analysis_json')
-        .eq('sessions.student_id', id)
+        .eq('student_id', id)
         .order('created_at', { ascending: false }),
     ]);
     if (studentRes.data) setStudent(studentRes.data as Student);

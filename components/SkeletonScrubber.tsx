@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Dimensions, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Svg, { Line, Circle } from 'react-native-svg';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { PoseFrame, ServePhaseRange, ServePhase, PoseLandmark } from '../../lib/types';
+import { PoseFrame, ServePhaseRange, ServePhase, PoseLandmark } from '../lib/types';
 import { PhasePill } from './index';
 
 const MEDIAPIPE_CONNECTIONS: [number, number][] = [

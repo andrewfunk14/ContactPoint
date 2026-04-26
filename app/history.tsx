@@ -20,7 +20,7 @@ interface AnalysisRow {
   score_overall: number | null;
   created_at: string;
   analysis_json: { faults?: { fault: string }[] } | null;
-  sessions: { students: { id: string; name: string } | null } | null;
+  students: { id: string; name: string } | null;
 }
 
 export default function HistoryScreen() {
@@ -35,7 +35,7 @@ export default function HistoryScreen() {
     const [analysesRes, studentsRes] = await Promise.all([
       supabase
         .from('serve_analyses')
-        .select('id, thumbnail_url, score_overall, created_at, analysis_json, sessions(students(id, name))')
+        .select('id, thumbnail_url, score_overall, created_at, analysis_json, students(id, name)')
         .order('created_at', { ascending: false }),
       supabase.from('students').select('id, name').order('name'),
     ]);
@@ -58,7 +58,7 @@ export default function HistoryScreen() {
   }
 
   const filtered = selectedStudentId
-    ? analyses.filter((a) => a.sessions?.students?.id === selectedStudentId)
+    ? analyses.filter((a) => a.students?.id === selectedStudentId)
     : analyses;
 
   return (
@@ -109,7 +109,7 @@ export default function HistoryScreen() {
             <Text style={styles.emptyText}>No analyses found.</Text>
           }
           renderItem={({ item }) => {
-            const studentName = item.sessions?.students?.name ?? 'Quick Session';
+            const studentName = item.students?.name ?? 'Quick Session';
             const firstFault = item.analysis_json?.faults?.[0]?.fault;
             return (
               <TouchableOpacity

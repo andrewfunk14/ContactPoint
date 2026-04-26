@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { supabase, uploadVideo, uploadThumbnail } from '../../lib/supabase';
-import { extractFrames, extractThumbnail, clearFrameCache } from '../../lib/frameExtractor';
-import { runPoseDetection } from '../../lib/poseDetector';
-import { calculateJointAngles, detectPhaseForFrame } from '../../lib/poseAnalytics';
+import { supabase, uploadVideo, uploadThumbnail } from '../lib/supabase';
+import { extractFrames, extractThumbnail, clearFrameCache } from '../lib/frameExtractor';
+import { runPoseDetection } from '../lib/poseDetector';
+import { calculateJointAngles, detectPhaseForFrame } from '../lib/poseAnalytics';
 import {
   ProcessingState,
   ServeAnalysis,
@@ -13,7 +13,7 @@ import {
   TechniqueFault,
   Drill,
   ProComparison,
-} from '../../lib/types';
+} from '../lib/types';
 
 interface PlayerInfo {
   dominantHand: 'right' | 'left';
@@ -22,7 +22,7 @@ interface PlayerInfo {
 }
 
 interface UseServeAnalysisReturn {
-  analyze: (videoUri: string, sessionId: string, playerInfo: PlayerInfo) => Promise<void>;
+  analyze: (videoUri: string, studentId: string | null, playerInfo: PlayerInfo) => Promise<void>;
   processing: ProcessingState | null;
   analysis: ServeAnalysis | null;
   error: string | null;
@@ -42,7 +42,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
 
   const analyze = useCallback(async (
     videoUri: string,
-    sessionId: string,
+    studentId: string | null,
     playerInfo: PlayerInfo
   ) => {
     try {
@@ -54,7 +54,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
         setProcessing({ step: 'extracting_frames', progress: 5 + (p * 0.45), message: 'Extracting video frames...' });
       });
 
-      const thumbnailUri = await extractThumbnail(videoUri);
+      const thumbnailUri: string | null = await extractThumbnail(videoUri);
 
       // Step 2: Pose detection
       setProcessing({ step: 'detecting_pose', progress: 35, message: 'Detecting body pose...' });
@@ -62,7 +62,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
       const poseFrames: PoseFrame[] = [];
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const keypoints = await runPoseDetection(frame.uri);
+        const keypoints = await runPoseDetection(frame.uri, frame.frameIndex);
         if (keypoints) {
           const angles = calculateJointAngles(keypoints, playerInfo.dominantHand);
           poseFrames.push({
@@ -134,26 +134,35 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
         };
       });
 
-      const { data: functionData, error: functionError } = await supabase.functions.invoke(
-        'analyze-serve',
-        {
-          body: {
-            poseFrames: sampledFrames,
-            detectedPhases,
-            playerInfo,
-          },
-        }
-      );
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (functionError) throw new Error(functionError.message);
+      const fnResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-serve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey ?? '',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ poseFrames: sampledFrames, detectedPhases, playerInfo }),
+      });
+
+      const functionData = await fnResponse.json();
+
+      if (!fnResponse.ok || !functionData?.ok) {
+        throw new Error(functionData?.error ?? `Function error ${fnResponse.status}`);
+      }
 
       setProcessing({ step: 'generating_drills', progress: 85, message: 'Uploading video...' });
 
-      // Step 5: Upload video and thumbnail in parallel
-      const videoFileName = `serve_${Date.now()}.mp4`;
+      // Step 5: Upload video (and thumbnail if available)
+      // Storage path uses userId as first folder to satisfy RLS policy
+      const storagePrefix = `${session?.user?.id}/${Date.now()}`;
+      const videoFileName = 'serve.mp4';
       const [videoUrl, thumbnailUrl] = await Promise.all([
-        uploadVideo(videoUri, sessionId, videoFileName),
-        uploadThumbnail(thumbnailUri, sessionId),
+        uploadVideo(videoUri, storagePrefix, videoFileName),
+        thumbnailUri ? uploadThumbnail(thumbnailUri, storagePrefix) : Promise.resolve(null),
       ]);
 
       // Step 6: Insert to DB
@@ -161,8 +170,8 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
       const { data: insertedAnalysis, error: insertError } = await supabase
         .from('serve_analyses')
         .insert({
-          session_id: sessionId,
-          coach_id: (await supabase.auth.getUser()).data.user?.id,
+          student_id: studentId || null,
+          coach_id: session?.user?.id,
           video_url: videoUrl,
           thumbnail_url: thumbnailUrl,
           score_overall: scores.overall,
@@ -182,7 +191,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
 
       const result: ServeAnalysis = {
         id: insertedAnalysis.id,
-        sessionId,
+        studentId: studentId ?? undefined,
         createdAt: insertedAnalysis.created_at,
         videoUri: videoUrl,
         thumbnailUri: thumbnailUrl,

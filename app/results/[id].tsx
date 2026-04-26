@@ -11,16 +11,16 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { supabase, getVideoUrl } from '../../lib/supabase';
 import { ServeAnalysis, TechniqueScore, ServePhaseRange, PoseFrame, TechniqueFault, Drill, ProComparison } from '../../lib/types';
-import { ScoreRing, FaultCard, DrillCard, ProComparisonCard } from '../components/index';
-import SkeletonScrubber from '../components/SkeletonScrubber';
+import { ScoreRing, FaultCard, DrillCard, ProComparisonCard } from '../../components/index';
+import SkeletonScrubber from '../../components/SkeletonScrubber';
 
 type TabType = 'technique' | 'drills' | 'pro';
 
 interface AnalysisDB {
   id: string;
-  session_id: string;
+  student_id: string | null;
   created_at: string;
   video_url: string;
   thumbnail_url: string | null;
@@ -39,15 +39,14 @@ interface AnalysisDB {
   pose_frames_json: PoseFrame[];
   detected_phases_json: ServePhaseRange[];
   coach_notes: string | null;
-  sessions: {
-    students: { name: string } | null;
-  } | null;
+  students: { name: string } | null;
 }
 
 export default function ResultsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<AnalysisDB | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('technique');
   const [coachNotes, setCoachNotes] = useState('');
@@ -58,13 +57,19 @@ export default function ResultsScreen() {
     if (!id) return;
     supabase
       .from('serve_analyses')
-      .select('*, sessions(students(name))')
+      .select('*, students(name)')
       .eq('id', id)
       .single()
-      .then(({ data: row, error }) => {
+      .then(async ({ data: row, error }) => {
         if (error || !row) { setLoading(false); return; }
         setData(row as AnalysisDB);
         setCoachNotes(row.coach_notes ?? '');
+        if (row.video_url) {
+          try {
+            const signed = await getVideoUrl(row.video_url);
+            setVideoUrl(signed);
+          } catch { /* video unavailable */ }
+        }
         setLoading(false);
       });
   }, [id]);
@@ -107,7 +112,7 @@ export default function ResultsScreen() {
     followThrough: data.score_follow_through,
   };
 
-  const studentName = data.sessions?.students?.name;
+  const studentName = data.students?.name;
   const date = new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const faults = data.analysis_json?.faults ?? [];
   const drills = data.analysis_json?.drills ?? [];
@@ -137,7 +142,7 @@ export default function ResultsScreen() {
         <SkeletonScrubber
           poseFrames={poseFrames}
           phases={phases}
-          videoUri={data.video_url}
+          videoUri={videoUrl ?? ''}
         />
       )}
 

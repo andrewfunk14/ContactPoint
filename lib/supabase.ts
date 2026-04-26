@@ -20,21 +20,30 @@ export const BUCKETS = {
 
 export async function uploadVideo(
   localUri: string,
-  sessionId: string,
+  pathPrefix: string,
   fileName: string
 ): Promise<string> {
   const response = await fetch(localUri);
   const blob = await response.blob();
 
-  const path = `${sessionId}/${fileName}`;
+  const path = `${pathPrefix}/${fileName}`;
   const { error } = await supabase.storage
     .from(BUCKETS.VIDEOS)
     .upload(path, blob, { contentType: 'video/mp4', upsert: true });
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from(BUCKETS.VIDEOS).getPublicUrl(path);
-  return data.publicUrl;
+  // Return the storage path so the caller can generate signed URLs on demand
+  return path;
+}
+
+export async function getVideoUrl(storagePath: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(BUCKETS.VIDEOS)
+    .createSignedUrl(storagePath, 60 * 60); // 1 hour
+
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export async function uploadThumbnail(

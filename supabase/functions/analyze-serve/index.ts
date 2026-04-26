@@ -56,14 +56,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const body = await req.json();
     const { poseFrames, detectedPhases, playerInfo } = body;
 
@@ -85,8 +77,8 @@ Please analyze this serve data and provide comprehensive feedback following the 
 Return only valid JSON matching the specified schema.`;
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });
@@ -106,13 +98,13 @@ Return only valid JSON matching the specified schema.`;
       }
     }
 
-    return new Response(JSON.stringify(analysisResult), {
+    return new Response(JSON.stringify({ ok: true, ...analysisResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+    console.error('analyze-serve error:', message);
+    return new Response(JSON.stringify({ ok: false, error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

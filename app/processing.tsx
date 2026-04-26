@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useServeAnalysis } from './hooks/useServeAnalysis';
+import { useServeAnalysis } from '../hooks/useServeAnalysis';
 
 const STEPS = [
   { key: 'extracting_frames', label: 'Extracting frames' },
@@ -15,7 +15,7 @@ export default function ProcessingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     videoUri: string;
-    sessionId: string;
+    studentId: string;
     dominantHand: string;
     level: string;
     studentName?: string;
@@ -38,7 +38,7 @@ export default function ProcessingScreen() {
     if (hasStarted.current) return;
     hasStarted.current = true;
 
-    analyze(params.videoUri, params.sessionId, {
+    analyze(params.videoUri, params.studentId || null, {
       dominantHand: (params.dominantHand as 'right' | 'left') ?? 'right',
       level: (params.level as 'beginner' | 'intermediate' | 'advanced' | 'elite') ?? 'intermediate',
       name: params.studentName,

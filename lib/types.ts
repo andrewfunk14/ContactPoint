@@ -113,7 +113,7 @@ export interface ProComparison {
 
 export interface ServeAnalysis {
   id: string;
-  sessionId: string;
+  studentId?: string;
   createdAt: string;
   videoUri: string;
   thumbnailUri?: string;

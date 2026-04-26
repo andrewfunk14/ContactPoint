@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 interface AnalysisRow {
@@ -19,9 +19,7 @@ interface AnalysisRow {
   thumbnail_url: string | null;
   score_overall: number | null;
   created_at: string;
-  sessions: {
-    students: { name: string } | null;
-  } | null;
+  students: { name: string } | null;
 }
 
 export default function HomeScreen() {
@@ -34,7 +32,7 @@ export default function HomeScreen() {
     setLoading(true);
     const { data } = await supabase
       .from('serve_analyses')
-      .select('id, thumbnail_url, score_overall, created_at, sessions(students(name))')
+      .select('id, thumbnail_url, score_overall, created_at, students(name)')
       .order('created_at', { ascending: false })
       .limit(15);
     setAnalyses((data as unknown as AnalysisRow[]) ?? []);
@@ -54,7 +52,7 @@ export default function HomeScreen() {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  const studentName = (row: AnalysisRow) => row.sessions?.students?.name ?? 'Quick Session';
+  const studentName = (row: AnalysisRow) => row.students?.name ?? 'Quick Session';
 
   return (
     <View style={styles.container}>
