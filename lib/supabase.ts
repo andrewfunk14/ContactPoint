@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -18,22 +19,36 @@ export const BUCKETS = {
   THUMBNAILS: 'thumbnails',
 } as const;
 
+// Uses the native HTTP client (FileSystem.uploadAsync) so the file is sent with
+// a proper Content-Length header. The blob/fetch path omits this header in RN,
+// which causes Supabase to store the file without size metadata and makes iOS
+// AVPlayer's byte-range requests fail with HTTP 416.
 export async function uploadVideo(
   localUri: string,
   pathPrefix: string,
   fileName: string
 ): Promise<string> {
-  const response = await fetch(localUri);
-  const blob = await response.blob();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? supabaseAnonKey;
 
   const path = `${pathPrefix}/${fileName}`;
-  const { error } = await supabase.storage
-    .from(BUCKETS.VIDEOS)
-    .upload(path, blob, { contentType: 'video/mp4', upsert: true });
+  const endpoint = `${supabaseUrl}/storage/v1/object/${BUCKETS.VIDEOS}/${path}`;
 
-  if (error) throw error;
+  const result = await FileSystem.uploadAsync(endpoint, localUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: supabaseAnonKey,
+      'Content-Type': 'video/mp4',
+      'x-upsert': 'true',
+    },
+  });
 
-  // Return the storage path so the caller can generate signed URLs on demand
+  if (result.status >= 400) {
+    throw new Error(`Video upload failed: ${result.status} ${result.body}`);
+  }
+
   return path;
 }
 
@@ -50,15 +65,26 @@ export async function uploadThumbnail(
   localUri: string,
   sessionId: string
 ): Promise<string> {
-  const response = await fetch(localUri);
-  const blob = await response.blob();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? supabaseAnonKey;
 
   const path = `${sessionId}/thumbnail.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKETS.THUMBNAILS)
-    .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+  const endpoint = `${supabaseUrl}/storage/v1/object/${BUCKETS.THUMBNAILS}/${path}`;
 
-  if (error) throw error;
+  const result = await FileSystem.uploadAsync(endpoint, localUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: supabaseAnonKey,
+      'Content-Type': 'image/jpeg',
+      'x-upsert': 'true',
+    },
+  });
+
+  if (result.status >= 400) {
+    throw new Error(`Thumbnail upload failed: ${result.status}`);
+  }
 
   const { data } = supabase.storage.from(BUCKETS.THUMBNAILS).getPublicUrl(path);
   return data.publicUrl;

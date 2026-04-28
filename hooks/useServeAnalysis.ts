@@ -62,7 +62,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
       const poseFrames: PoseFrame[] = [];
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
-        const keypoints = await runPoseDetection(frame.uri, frame.frameIndex);
+        const keypoints = await runPoseDetection(frame.uri, frame.frameIndex, frames.length);
         if (keypoints) {
           const angles = calculateJointAngles(keypoints, playerInfo.dominantHand);
           poseFrames.push({
@@ -194,7 +194,7 @@ export function useServeAnalysis(): UseServeAnalysisReturn {
         studentId: studentId ?? undefined,
         createdAt: insertedAnalysis.created_at,
         videoUri: videoUrl,
-        thumbnailUri: thumbnailUrl,
+        thumbnailUri: thumbnailUrl ?? undefined,
         phases: phaseRanges,
         poseFrames,
         scores,

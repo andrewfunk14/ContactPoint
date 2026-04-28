@@ -143,6 +143,7 @@ export default function ResultsScreen() {
           poseFrames={poseFrames}
           phases={phases}
           videoUri={videoUrl ?? ''}
+          faults={faults}
         />
       )}
 
